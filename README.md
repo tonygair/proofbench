@@ -79,6 +79,19 @@ across four runs of an identical configuration on 58 tasks.
 
 That is why I am asking. See `WHY_REPEATS.md`.
 
+**And it is worse than that, which is the honest part.** A later series of six
+runs on the same tasks and the same model gave **26, 26, 26, 26, 28 and 29** —
+a tight spread, but well below the first series. Between the two, the harness
+changed: portability fixes, a manual-lookup fallback, and the machine was busy
+with other work. I have not isolated which of those moved it, so I am not going
+to tell you the two series are comparable.
+
+⇒ The shipped `harness/results-unfettered.jsonl` is from the SECOND series, so
+its numbers will not match the first ones quoted above. That is not an error in
+the file. It is the thing this whole repository is about: **a score belongs to
+the exact configuration and conditions that produced it, and I cannot show you
+the first series' conditions any more.**
+
 ## Known-impossible tasks — do not count these against your model
 
 Four of the 58 have specifications that **cannot be satisfied by any
