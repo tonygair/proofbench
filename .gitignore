@@ -1,3 +1,5 @@
 run*.log
 harness/proofbench
 staging/
+harness/unfettered/
+harness/staging/
