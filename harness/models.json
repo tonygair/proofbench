@@ -23,7 +23,7 @@
         "_source_language_scan": {
           "scanned_utc": "2026-09-02T05:00:00Z",
           "communities": "Zhihu / Juejin / ModelScope / CSDN / Bilibili (per reference_chinese_forum_watchlist_qwen_deepseek)",
-          "brief": "/Users/tony/ObVault/landscape/2026-09-cn-ops.md",
+          "brief": "internal source-language scan record (not published)",
           "findings_the_card_lacks": [
             "repetition trap is temp=0 AND top_p=0 TOGETHER, not temp=0 alone",
             "ollama /no_think can FAIL on Qwen3.5+; the API think:false parameter is the reliable lever",
@@ -62,7 +62,7 @@
         "_source_language_scan": {
           "scanned_utc": "2026-09-02T05:00:00Z",
           "communities": "Zhihu / Juejin / ModelScope / CSDN (per reference_chinese_forum_watchlist_qwen_deepseek)",
-          "brief": "/Users/tony/ObVault/landscape/2026-09-cn-ops.md",
+          "brief": "internal source-language scan record (not published)",
           "findings_the_card_lacks": [
             "repetition trap is temp=0 AND top_p=0 together",
             "ollama /no_think can fail on Qwen3.5+; API think:false is the reliable lever"
@@ -95,7 +95,7 @@
         "_source_language_scan": {
           "scanned_utc": "2026-09-02T05:00:00Z",
           "communities": "Zhihu / Juejin / ModelScope / CSDN / Bilibili (per reference_chinese_forum_watchlist_qwen_deepseek)",
-          "brief": "/Users/tony/ObVault/landscape/2026-09-cn-ops.md",
+          "brief": "internal source-language scan record (not published)",
           "findings_the_card_lacks": [
             "repetition trap is temp=0 AND top_p=0 TOGETHER, not temp=0 alone",
             "ollama /no_think can FAIL on Qwen3.5+; the API think:false parameter is the reliable lever",
@@ -132,7 +132,7 @@
         "_source_language_scan": {
           "scanned_utc": "2026-09-02T05:00:00Z",
           "communities": "Zhihu / Juejin / ModelScope / CSDN / Bilibili (per reference_chinese_forum_watchlist_qwen_deepseek)",
-          "brief": "/Users/tony/ObVault/landscape/2026-09-cn-ops.md",
+          "brief": "internal source-language scan record (not published)",
           "findings_the_card_lacks": [
             "repetition trap is temp=0 AND top_p=0 TOGETHER, not temp=0 alone",
             "ollama /no_think can FAIL on Qwen3.5+; the API think:false parameter is the reliable lever",
