@@ -430,7 +430,14 @@ func run(trackDir, runDir, model, rail, only, proseRound string, attempts, candi
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return err
 	}
-	sink, err := os.Create(filepath.Join(runDir, "results-unfettered.jsonl"))
+	// ⚠ APPEND, never truncate (2026-09-03). os.Create wiped the file at the
+	// start of every run, so three draws left the per-task detail of exactly
+	// one — in a harness whose entire premise is that ONE DRAW IS NOT A
+	// MEASUREMENT. The scores survived in the run logs; everything else did
+	// not. Rows carry at_utc, model and the full sampling policy, so runs stay
+	// distinguishable without a separate file per run.
+	sink, err := os.OpenFile(filepath.Join(runDir, "results-unfettered.jsonl"),
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}
