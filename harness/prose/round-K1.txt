@@ -1,0 +1,107 @@
+You are writing the body of one SPARK/Ada subprogram whose specification is
+already fixed. GNATprove at --level=2 decides whether you succeeded. Nothing
+else does. A body that compiles but leaves one check unproved has failed.
+
+OUTPUT FORMAT — obey this exactly or the work is discarded unread.
+Respond with ONLY a JSON array of EXACTLY 2 strings. The first character of
+your response is [ and the last is ]. No prose before it, no explanation after
+it, no markdown fence, ASCII only.
+  element 1 = the whole text of the <vc-helpers> section
+  element 2 = the whole text of the <vc-code> section
+Use "" for element 1 if you need no helper. Each element is the exact Ada text
+that replaces everything between those tags; escape newlines as \n.
+
+WHAT GOES IN EACH SECTION
+  <vc-helpers> sits in the package body's declarative part. Only complete
+  declarations belong here: expression functions, ghost functions, ordinary
+  functions, each with a full profile and a terminating semicolon. Never put
+  the specified subprogram's body here.
+  <vc-code> is the complete body of the subprogram declared in <vc-spec>. Its
+  profile must repeat the declaration exactly, then "is", declarations, "begin",
+  statements, "end Name;".
+
+NEVER write pragma Assume, pragma Annotate (GNATprove, ...), SPARK_Mode => Off,
+pragma Suppress, pragma Warnings (Off), or Unchecked_Conversion. These are
+detected and rejected before the prover is consulted. pragma Assert and
+pragma Loop_Invariant are NOT bypasses and are wanted wherever they help.
+
+Do not alter the specification, the profile, or any Pre or Post aspect.
+
+==========================================================================
+SPARK RULES THAT COST THIS SHOP REAL ITERATIONS. Every one below is a fault
+that has been emitted on this exact lane and rejected by GNATprove. They are
+properties of SPARK, not hints about your particular task.
+==========================================================================
+
+1. AN "out" PARAMETER MUST BE INITIALISED ON EVERY PATH, AND FLOW ANALYSIS
+   WILL NOT TAKE A LOOP'S WORD FOR IT.
+   SPARK's flow analysis is not the prover; it does not reason about ranges.
+   A loop that plainly writes every element of an "out" array still leaves flow
+   analysis saying the array "might not be initialized".
+   The fix is one statement, placed BEFORE the loop, initialising the whole
+   object at once:
+        Result := (others => <a LITERAL constant of the element type>);
+   Write it even when the loop that follows overwrites every element. For an
+   "out" scalar, assign it on every path, including paths you believe
+   unreachable.
+
+   ★ THE INITIALISER MUST BE A LITERAL — 0, False, and so on. Do NOT read a
+   value out of another array to seed it. "Result := (others => A (A'First));"
+   looks harmless and is an unprovable index check: unless the Pre says
+   A'Length > 0, the array may be empty and A'First is then not a valid index.
+   Read the Pre. If it does not guarantee a non-empty array, index nothing
+   before the loop.
+
+7e. ★ DO NOT DECLARE A LOCAL SHADOW OF THE "out" PARAMETER.
+   Assign the "out" parameter itself and let the invariant speak about it. A
+   local copy that is updated inside the loop while the parameter is updated
+   only at the end gives you an invariant relating two things that drift apart,
+   and it fails in the first iteration. Once assigned, an "out" parameter may
+   be read.
+
+7f. ★ REPRODUCE THE POST'S COMPARISONS EXACTLY, STRICT FOR STRICT.
+   Where the Post distinguishes ">" on one side of an index from ">=" on the
+   other, your invariant must carry the same distinction. Weakening a strict
+   comparison to a non-strict one in the invariant leaves the Post unproved;
+   strengthening a non-strict one to strict leaves the invariant unpreserved.
+   Copy the Post's operators character for character.
+
+9. WRITE ADA, NOT PSEUDO-ADA. These exact inventions have been emitted here:
+     - "implies" is NOT an Ada operator. Write (if X then Y).
+     - "Pre'Class" / "Post'Class" are only legal on a primitive of a tagged
+       type. On a plain subprogram write Pre and Post.
+     - Do not mix "and" with "and then", or "or" with "or else", in one
+       expression without parentheses: GNAT rejects it as mixed logical
+       operators.
+     - Quantifiers are (for all J in Range => Expr) and (for some J in Range
+       => Expr). The arrow is required.
+     - 'Result is legal only inside a function's Post.
+     - Array attributes are A'First, A'Last, A'Range, A'Length.
+
+10. EVERY RUN-TIME CHECK MUST BE PROVABLE, AND THE TYPES HERE ARE BOUNDED.
+    The subtypes in the preamble have real bounds, so overflow and range checks
+    are genuine obligations. An intermediate value that leaves its subtype's
+    range is an unproved check even when the final answer would be in range.
+      - Read the preamble. Where a wider result subtype is declared, the
+        specification intends the operation to land in it; where it is not,
+        derive the bound from the operand subtypes.
+      - Where a bound is carried across iterations, state it as a further
+        Loop_Invariant; where it is local, state it as a pragma Assert.
+      - Division and mod: the divisor must be provably non-zero.
+      - Indexing a SECOND array is only free if the Pre ties its bounds to the
+        first one's. Read the Pre and use what it gives you.
+
+11. USE THE SPECIFICATION AS THE INSTRUCTION, AND KEEP THE BODY SIMPLE.
+    The Post is the whole of what you must achieve — no more, no less. Prefer a
+    single straightforward loop over a clever one. Prefer an expression function
+    helper over a procedure helper. Do not declare variables you do not use, and
+    do not add annotations you do not need.
+
+==========================================================================
+Before you finish, check your body against this, which accounts for a
+large share of rejections on this lane:
+  (a) Is the whole "out" object initialised before the loop?            [rule 1]
+==========================================================================
+
+SPARK FILE WITH PLACEHOLDER SECTIONS:
+{{TASK_FILE}}

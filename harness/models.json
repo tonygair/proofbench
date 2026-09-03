@@ -1,0 +1,147 @@
+{
+  "qwen3-coder": {
+    "provider": "ollama",
+    "api_url": "http://127.0.0.1:11434/api/generate",
+    "api_model": "qwen3-coder:30b",
+    "sampling": {
+      "family": "qwen3.x",
+      "think": false,
+      "temperature": 0.7,
+      "top_p": 0.8,
+      "top_k": 20,
+      "min_p": 0.0,
+      "num_predict": 65536,
+      "min_temperature": 0.7,
+      "_authority": "Qwen3-Coder-30B-A3B-Instruct card, Best Practices.",
+      "_provenance": {
+        "source_url": "https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct/raw/main/README.md",
+        "doc_sha256": "98e8f0e00f2d6c7f1743fc4ef2b6297dcc57bec73d71f36588aed984370ac3f3",
+        "doc_bytes": 5425,
+        "retrieved_utc": "2026-09-02T16:10:00Z",
+        "quoted_sampling": "We suggest using `temperature=0.7`, `top_p=0.8`, `top_k=20`, `repetition_penalty=1.05`.",
+        "quoted_output_length": "We recommend using an output length of 65,536 tokens for most queries",
+        "_source_language_scan": {
+          "scanned_utc": "2026-09-02T05:00:00Z",
+          "communities": "Zhihu / Juejin / ModelScope / CSDN / Bilibili (per reference_chinese_forum_watchlist_qwen_deepseek)",
+          "brief": "/Users/tony/ObVault/landscape/2026-09-cn-ops.md",
+          "findings_the_card_lacks": [
+            "repetition trap is temp=0 AND top_p=0 TOGETHER, not temp=0 alone",
+            "ollama /no_think can FAIL on Qwen3.5+; the API think:false parameter is the reliable lever",
+            "a DGX-Spark bench of Qwen3.8-27B had greedy beat the THINKING sampler (anecdote, not a default)",
+            "forum practitioners suggested temp 0.1-0.3 for code — OVERRIDDEN by the card's 0.7"
+          ],
+          "_note": "Order (2) of feedback_model_adoption_rtfm_and_many_languages: source-language scan. The manual is the baseline; forums add hardware/version colour. Recorded so the evidence chain covers BOTH standing orders, not just RTFM."
+        }
+      },
+      "repetition_penalty": 1.05
+    }
+  },
+  "qwen38-base": {
+    "provider": "ollama",
+    "api_url": "http://127.0.0.1:11434/api/generate",
+    "api_model": "qwen3.8:27b",
+    "sampling": {
+      "family": "qwen3.8",
+      "think": false,
+      "temperature": 0.7,
+      "top_p": 0.80,
+      "top_k": 20,
+      "min_p": 0.0,
+      "presence_penalty": 1.5,
+      "repetition_penalty": 1.0,
+      "num_predict": 32768,
+      "min_temperature": 0.7,
+      "_authority": "Qwen3.8-27B OWN model card, Instruct (non-thinking) row. NOTE presence_penalty=1.5 — absent from the Qwen3-32B line card that Rosie was configured from.",
+      "_provenance": {
+        "source_url": "https://huggingface.co/Qwen/Qwen3.8-27B/raw/main/README.md",
+        "doc_sha256": "57e4bdb258ee1a7d2635c5174ebd4e56abe392505cdb5f8bbb356b0dc4293641",
+        "doc_bytes": 65012,
+        "retrieved_utc": "2026-09-02T22:10:00Z",
+        "quoted_non_thinking": "Instruct (or non-thinking) mode: temperature=0.7, top_p=0.80, top_k=20, min_p=0.0, presence_penalty=1.5, repetition_penalty=1.0",
+        "licence": "Apache-2.0, worldwide grant, NO territory clause (LICENSE read 2026-09-02)",
+        "_source_language_scan": {
+          "scanned_utc": "2026-09-02T05:00:00Z",
+          "communities": "Zhihu / Juejin / ModelScope / CSDN (per reference_chinese_forum_watchlist_qwen_deepseek)",
+          "brief": "/Users/tony/ObVault/landscape/2026-09-cn-ops.md",
+          "findings_the_card_lacks": [
+            "repetition trap is temp=0 AND top_p=0 together",
+            "ollama /no_think can fail on Qwen3.5+; API think:false is the reliable lever"
+          ]
+        }
+      }
+    }
+  },
+  "deepseek-r1": {
+    "provider": "ollama",
+    "api_url": "http://127.0.0.1:11434/api/generate",
+    "api_model": "deepseek-r1:32b",
+    "sampling": {
+      "family": "qwen3.x",
+      "think": true,
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "top_k": 0,
+      "min_p": 0.0,
+      "num_predict": 32768,
+      "min_temperature": 0.5,
+      "_authority": "DeepSeek-R1-Distill-Qwen-32B card, Usage Recommendations.",
+      "_provenance": {
+        "source_url": "https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-32B/raw/main/README.md",
+        "doc_sha256": "d26d26ddb518fee60c6c6bf7a708bd751b1619d93a4944f188143693d956c77f",
+        "doc_bytes": 15994,
+        "retrieved_utc": "2026-09-02T16:10:00Z",
+        "quoted_sampling": "Set the temperature within the range of 0.5-0.7 (0.6 is recommended) to prevent endless repetitions or incoherent outputs.",
+        "quoted_output_length": "the maximum generation length is set to 32,768 tokens",
+        "_source_language_scan": {
+          "scanned_utc": "2026-09-02T05:00:00Z",
+          "communities": "Zhihu / Juejin / ModelScope / CSDN / Bilibili (per reference_chinese_forum_watchlist_qwen_deepseek)",
+          "brief": "/Users/tony/ObVault/landscape/2026-09-cn-ops.md",
+          "findings_the_card_lacks": [
+            "repetition trap is temp=0 AND top_p=0 TOGETHER, not temp=0 alone",
+            "ollama /no_think can FAIL on Qwen3.5+; the API think:false parameter is the reliable lever",
+            "a DGX-Spark bench of Qwen3.8-27B had greedy beat the THINKING sampler (anecdote, not a default)",
+            "forum practitioners suggested temp 0.1-0.3 for code — OVERRIDDEN by the card's 0.7"
+          ],
+          "_note": "Order (2) of feedback_model_adoption_rtfm_and_many_languages: source-language scan. The manual is the baseline; forums add hardware/version colour. Recorded so the evidence chain covers BOTH standing orders, not just RTFM."
+        }
+      }
+    }
+  },
+  "qwen25-coder": {
+    "provider": "ollama",
+    "api_url": "http://127.0.0.1:11434/api/generate",
+    "api_model": "qwen2.5-coder:32b",
+    "sampling": {
+      "family": "qwen3.x",
+      "think": false,
+      "temperature": 0.7,
+      "top_p": 0.8,
+      "top_k": 20,
+      "min_p": 0.0,
+      "num_predict": 32768,
+      "min_temperature": 0.1,
+      "_authority": "CARD IS SILENT on sampling. Values below are the Qwen line default, NOT model-card authority. Treat any qwen2.5-coder benchmark as sampling-unproven.",
+      "_provenance": {
+        "source_url": "https://huggingface.co/Qwen/Qwen2.5-Coder-32B-Instruct/raw/main/README.md",
+        "doc_sha256": "a5a35b614244ebc10946c05972f4b0d8785406214afac5c6c08ce793e9272ead",
+        "doc_bytes": 6397,
+        "retrieved_utc": "2026-09-02T16:10:00Z",
+        "card_silent_on_sampling": true,
+        "quoted_sampling": "(none — the card gives no temperature/top_p guidance; only max_new_tokens=512 in a usage example)",
+        "_note": "Read on 2026-09-02 and found silent. This is genuine RTFM evidence of ABSENCE, not an unread card.",
+        "_source_language_scan": {
+          "scanned_utc": "2026-09-02T05:00:00Z",
+          "communities": "Zhihu / Juejin / ModelScope / CSDN / Bilibili (per reference_chinese_forum_watchlist_qwen_deepseek)",
+          "brief": "/Users/tony/ObVault/landscape/2026-09-cn-ops.md",
+          "findings_the_card_lacks": [
+            "repetition trap is temp=0 AND top_p=0 TOGETHER, not temp=0 alone",
+            "ollama /no_think can FAIL on Qwen3.5+; the API think:false parameter is the reliable lever",
+            "a DGX-Spark bench of Qwen3.8-27B had greedy beat the THINKING sampler (anecdote, not a default)",
+            "forum practitioners suggested temp 0.1-0.3 for code — OVERRIDDEN by the card's 0.7"
+          ],
+          "_note": "Order (2) of feedback_model_adoption_rtfm_and_many_languages: source-language scan. The manual is the baseline; forums add hardware/version colour. Recorded so the evidence chain covers BOTH standing orders, not just RTFM."
+        }
+      }
+    }
+  }
+}

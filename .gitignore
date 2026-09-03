@@ -1,0 +1,3 @@
+run*.log
+harness/proofbench
+staging/

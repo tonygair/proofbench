@@ -1,0 +1,275 @@
+You are writing the body of one SPARK/Ada subprogram whose specification is
+already fixed. GNATprove at --level=2 decides whether you succeeded. Nothing
+else does. A body that compiles but leaves one check unproved has failed.
+
+OUTPUT FORMAT — obey this exactly or the work is discarded unread.
+Respond with ONLY a JSON array of EXACTLY 2 strings. The first character of
+your response is [ and the last is ]. No prose before it, no explanation after
+it, no markdown fence, ASCII only.
+  element 1 = the whole text of the <vc-helpers> section
+  element 2 = the whole text of the <vc-code> section
+Use "" for element 1 if you need no helper. Each element is the exact Ada text
+that replaces everything between those tags; escape newlines as \n.
+
+WHAT GOES IN EACH SECTION
+  <vc-helpers> sits in the package body's declarative part. Only complete
+  declarations belong here: expression functions, ghost functions, ordinary
+  functions, each with a full profile and a terminating semicolon. Never put
+  the specified subprogram's body here.
+  <vc-code> is the complete body of the subprogram declared in <vc-spec>. Its
+  profile must repeat the declaration exactly, then "is", declarations, "begin",
+  statements, "end Name;".
+
+NEVER write pragma Assume, pragma Annotate (GNATprove, ...), SPARK_Mode => Off,
+pragma Suppress, pragma Warnings (Off), or Unchecked_Conversion. These are
+detected and rejected before the prover is consulted. pragma Assert and
+pragma Loop_Invariant are NOT bypasses and are wanted wherever they help.
+
+Do not alter the specification, the profile, or any Pre or Post aspect.
+
+==========================================================================
+SPARK RULES THAT COST THIS SHOP REAL ITERATIONS. Every one below is a fault
+that has been emitted on this exact lane and rejected by GNATprove. They are
+properties of SPARK, not hints about your particular task.
+==========================================================================
+
+1. AN "out" PARAMETER MUST BE INITIALISED ON EVERY PATH, AND FLOW ANALYSIS
+   WILL NOT TAKE A LOOP'S WORD FOR IT.
+   SPARK's flow analysis is not the prover; it does not reason about ranges.
+   A loop that plainly writes every element of an "out" array still leaves flow
+   analysis saying the array "might not be initialized".
+   The fix is one statement, placed BEFORE the loop, initialising the whole
+   object at once:
+        Result := (others => <a LITERAL constant of the element type>);
+   Write it even when the loop that follows overwrites every element. For an
+   "out" scalar, assign it on every path, including paths you believe
+   unreachable.
+
+   ★ THE INITIALISER MUST BE A LITERAL — 0, False, and so on. Do NOT read a
+   value out of another array to seed it. "Result := (others => A (A'First));"
+   looks harmless and is an unprovable index check: unless the Pre says
+   A'Length > 0, the array may be empty and A'First is then not a valid index.
+   Read the Pre. If it does not guarantee a non-empty array, index nothing
+   before the loop.
+
+2. ★ THE LOOP INVARIANT GOES AT THE **END** OF THE LOOP BODY, AFTER THE WORK.
+   This is now the most expensive mistake on this lane. A pragma
+   Loop_Invariant is checked WHERE IT STANDS. Put it FIRST, before the
+   statement that does the iteration's work, and at that moment the current
+   index has not been written yet — so an invariant claiming anything about
+   the current index is false, and an invariant that dodges the problem by
+   claiming nothing carries nothing to the postcondition. Both were emitted
+   here and both failed.
+
+   Write the loop in this shape, always:
+
+        for I in <the range> loop
+           <the statements that do this iteration's work>
+           pragma Loop_Invariant (<what is true of everything done so far>);
+        end loop;
+
+   And "what is true of everything done so far" means a quantified statement
+   over the whole processed prefix, INCLUDING the current index:
+
+        pragma Loop_Invariant
+          (for all J in <the first index> .. I => <the property the Post
+                                                   asserts about index J>);
+
+   Read the Post. Whatever the Post asserts for every index, your invariant
+   asserts for every index up to and including I. On the last iteration those
+   two statements coincide, and that is how the Post gets proved. An invariant
+   that speaks only about the current element, or only about the element
+   before it, proves nothing on exit.
+
+   If the Post is a conjunction, carry EVERY conjunct in the invariant. An
+   invariant that establishes one conjunct and forgets another is the second
+   most common failure here.
+
+3. ★ 'Loop_Entry IS FOR FRAMING WHAT DID **NOT** CHANGE. IT CAN NEVER STATE
+   PROGRESS.
+   X'Loop_Entry is the value X had BEFORE the loop began. Writing
+   "Result'Loop_Entry (I) = 0" says something about the pre-loop value; it says
+   nothing whatever about the work the loop has done, so it carries nothing to
+   the Post. Every invariant of that shape emitted here has failed.
+   Use 'Loop_Entry ONLY to say that something the Post mentions is unchanged by
+   the loop. To say what the loop has ACHIEVED, quantify over the processed
+   prefix as in rule 2 — with the plain name, not 'Loop_Entry.
+
+4. ★ A pragma Loop_Invariant MUST STAND IMMEDIATELY AMONG THE LOOP'S OWN
+   STATEMENTS.
+   Not in a declarative part. Not before the "loop" keyword. Not nested inside
+   an if or a case inside the loop. GNAT rejects any of those outright with
+   "must appear immediately within the statements of a loop". If the work is
+   done inside an if, close the if first, then write the invariant after it at
+   the top level of the loop body.
+
+5. ★ A QUANTIFIED VARIABLE IS NOT ITS OWN BOUND.
+   "(for all J in A'First .. J => ...)" is illegal — J is not visible in its
+   own range. The bound is the LOOP COUNTER; the quantified variable is a
+   different name. Write "(for all J in A'First .. I => ...)" where I is the
+   loop counter and J is the quantified variable. Never let the same
+   identifier appear as both.
+
+6. ★ INDEX FROM THE ARRAY'S OWN BOUNDS, NEVER FROM A LITERAL.
+   These arrays are unconstrained; A'First is NOT guaranteed to be 0. Writing a
+   slice or a range as "0 .. I" produces a range check that cannot be proved
+   and often cannot even be justified. Always write A'First, A'Last, A'Range,
+   or the loop counter. The same goes for Result: use Result'First, and note
+   the Pre usually ties Result's bounds to A's — read it and use it.
+
+7. ★ YOUR ARRAY TYPES HAVE NO ARITHMETIC OR LOGICAL OPERATORS, AND YOU CANNOT
+   COMPARE A SLICE TO AN AGGREGATE.
+   There is no "and", "or", "xor", "+" or "*" defined for a user-defined array
+   type here, so "A (A'First .. I) and B (A'First .. I)" does not compile.
+   Likewise "Result (A'First .. I) = (others => 0)" does not compile — an
+   "others" aggregate has no bounds in that position.
+   Say all of it element-wise with a quantifier instead:
+        (for all J in A'First .. I => Result (J) = <expression in A (J), B (J)>)
+   Element-wise quantification is the only form that both compiles and proves.
+
+7b. ★ A QUANTIFIED EXPRESSION IS A BOOLEAN. IT DOES NOT RETURN A VALUE.
+   "(for some J in A'Range => A (J))" is not the largest element, not any
+   element, and not a number of any kind - it is a type error, and GNAT says
+   "expected type Standard.Boolean". This was emitted three times on this lane.
+   To say that Result is one of the elements, put the equality INSIDE the
+   quantifier, where it belongs:
+        (for some J in A'Range => Result = A (J))
+   To say Result is at least every element, likewise:
+        (for all J in A'Range => Result >= A (J))
+   A quantifier can never appear as an operand of "=", "+", or any other
+   operator expecting a value.
+
+7c. ★ "others" IS LEGAL ONLY IN THE WHOLE-OBJECT INITIALISER OF RULE 1.
+   Never write "others" inside a pragma Loop_Invariant, a pragma Assert or any
+   contract. "Result (Result'First .. I) = (others => 0)" does not compile.
+   Say it with a quantifier: "(for all J in Result'First .. I => Result (J) = 0)".
+
+7d. ★ PARENTHESISE THE RIGHT-HAND SIDE OF AN EQUALITY WHEN THE ELEMENT TYPE
+   HAS ITS OWN OPERATORS.
+   "Result (J) = A (J) and B (J)" parses as "(Result (J) = A (J)) and B (J)",
+   which is a type error. Write "Result (J) = (A (J) and B (J))". The same
+   applies to or, xor, +, * and mod on the element type.
+
+7e. ★ DO NOT DECLARE A LOCAL SHADOW OF THE "out" PARAMETER.
+   Assign the "out" parameter itself and let the invariant speak about it. A
+   local copy that is updated inside the loop while the parameter is updated
+   only at the end gives you an invariant relating two things that drift apart,
+   and it fails in the first iteration. Once assigned, an "out" parameter may
+   be read.
+
+7f. ★ REPRODUCE THE POST'S COMPARISONS EXACTLY, STRICT FOR STRICT.
+   Where the Post distinguishes ">" on one side of an index from ">=" on the
+   other, your invariant must carry the same distinction. Weakening a strict
+   comparison to a non-strict one in the invariant leaves the Post unproved;
+   strengthening a non-strict one to strict leaves the invariant unpreserved.
+   Copy the Post's operators character for character.
+
+8. ★ BALANCE YOUR PARENTHESES, AND KEEP EACH INVARIANT SHORT.
+   Three bodies were thrown away on this lane for a single missing ")". Prefer
+   SEVERAL short pragma Loop_Invariant lines, one property each, in sequence,
+   over one deeply nested expression. They are conjoined by the prover exactly
+   as if you had written one, and they are far easier to get right:
+        pragma Loop_Invariant (<first property>);
+        pragma Loop_Invariant (<second property>);
+   Count the parentheses on every line you write before you finish it.
+
+9. WRITE ADA, NOT PSEUDO-ADA. These exact inventions have been emitted here:
+     - "implies" is NOT an Ada operator. Write (if X then Y).
+     - "Pre'Class" / "Post'Class" are only legal on a primitive of a tagged
+       type. On a plain subprogram write Pre and Post.
+     - Do not mix "and" with "and then", or "or" with "or else", in one
+       expression without parentheses: GNAT rejects it as mixed logical
+       operators.
+     - Quantifiers are (for all J in Range => Expr) and (for some J in Range
+       => Expr). The arrow is required.
+     - 'Result is legal only inside a function's Post.
+     - Array attributes are A'First, A'Last, A'Range, A'Length.
+
+10. EVERY RUN-TIME CHECK MUST BE PROVABLE, AND THE TYPES HERE ARE BOUNDED.
+    The subtypes in the preamble have real bounds, so overflow and range checks
+    are genuine obligations. An intermediate value that leaves its subtype's
+    range is an unproved check even when the final answer would be in range.
+      - Read the preamble. Where a wider result subtype is declared, the
+        specification intends the operation to land in it; where it is not,
+        derive the bound from the operand subtypes.
+      - Where a bound is carried across iterations, state it as a further
+        Loop_Invariant; where it is local, state it as a pragma Assert.
+      - Division and mod: the divisor must be provably non-zero.
+      - Indexing a SECOND array is only free if the Pre ties its bounds to the
+        first one's. Read the Pre and use what it gives you.
+
+11. USE THE SPECIFICATION AS THE INSTRUCTION, AND KEEP THE BODY SIMPLE.
+    The Post is the whole of what you must achieve — no more, no less. Prefer a
+    single straightforward loop over a clever one. Prefer an expression function
+    helper over a procedure helper. Do not declare variables you do not use, and
+    do not add annotations you do not need.
+
+==========================================================================
+Before you finish, check your body against these four, which account for
+nearly every rejection on this lane:
+  (a) Is the whole "out" object initialised before the loop?            [rule 1]
+  (b) Is every Loop_Invariant the LAST thing in the loop body, quantified
+      over <first> .. I, asserting what the Post asserts?          [rules 2, 4]
+  (c) Have you avoided 'Loop_Entry-as-progress, literal 0 bounds, array-wide
+      operators and slice-equals-aggregate?                     [rules 3, 6, 7]
+  (d) Is every quantifier used as a BOOLEAN, with the equality inside it, and
+      is "others" absent from every pragma?                    [rules 7b, 7c]
+  (e) Do the parentheses balance on every line?                        [rule 8]
+==========================================================================
+
+==========================================================================
+9. NESTED LOOPS: THE INNER INVARIANT HAS **TWO** PARTS, NOT ONE.
+==========================================================================
+   This is the most expensive mistake on the matrix lane. It has been emitted
+   here on EVERY matrix task so far and GNATprove rejected every one with
+   "loop invariant might fail in first iteration".
+
+   In a nested loop the inner invariant must describe EXACTLY what has been
+   written at that moment, which is:
+     (a) every EARLIER outer row, COMPLETELY; and
+     (b) the CURRENT outer row, only UP TO the current inner index.
+
+   Claiming the whole inner range for the current row - "for all rows up to and
+   including I, for all columns" - is FALSE IN THE FIRST INNER ITERATION,
+   because the current row has had only one element written.
+
+   Write the two parts, always, in this shape:
+
+        for I in A'Range (1) loop
+           for J in A'Range (2) loop
+              Result (J, I) := A (I, J);
+              pragma Loop_Invariant
+                ((for all K in A'First (1) .. I - 1 =>          -- (a) EARLIER rows, whole
+                    (for all L in A'Range (2) =>
+                       Result (L, K) = A (K, L)))
+                 and then
+                 (for all L in A'First (2) .. J =>              -- (b) CURRENT row, so far
+                    Result (L, I) = A (I, L)));
+           end loop;
+           pragma Loop_Invariant                                -- outer: rows <= I whole
+             (for all K in A'First (1) .. I =>
+                (for all L in A'Range (2) =>
+                   Result (L, K) = A (K, L)));
+        end loop;
+
+   The outer loop carries its OWN invariant, at the END of the outer body,
+   saying every row up to and including I is complete. Without it, part (a) has
+   nothing to stand on in the next outer pass.
+
+   The same two-part shape applies whenever the written element depends on both
+   indices, including masking tasks that write 0 in one region and copy in the
+   other: state BOTH regions in BOTH parts.
+
+10. AN ARITHMETIC POST NEEDS ITS RANGE CARRIED IN THE INVARIANT.
+   If the Post multiplies or accumulates ("Result (I) = Result (I - 1) * A (I)"),
+   the prover must know the running value is still in range BEFORE it multiplies
+   again, or it answers "range check might fail, cannot prove lower bound".
+   Add to the invariant an explicit bound on every element written so far, using
+   the constants the preamble gives you, e.g.
+        (for all K in A'First .. I => Result (K) in -Max_Product .. Max_Product)
+   State the bound for BOTH signs. Read the preamble for the constant that
+   bounds the accumulation; it is there because you need it.
+
+
+SPARK FILE WITH PLACEHOLDER SECTIONS:
+{{TASK_FILE}}

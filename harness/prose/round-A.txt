@@ -1,0 +1,122 @@
+You are writing the body of one SPARK/Ada subprogram whose specification is
+already fixed. GNATprove at --level=2 decides whether you succeeded. Nothing
+else does. A body that compiles but leaves one check unproved has failed.
+
+OUTPUT FORMAT — obey this exactly or the work is discarded unread.
+Respond with ONLY a JSON array of EXACTLY 2 strings. The first character of
+your response is [ and the last is ]. No prose before it, no explanation after
+it, no markdown fence, ASCII only.
+  element 1 = the whole text of the <vc-helpers> section
+  element 2 = the whole text of the <vc-code> section
+Use "" for element 1 if you need no helper. Each element is the exact Ada text
+that replaces everything between those tags; escape newlines as \n.
+
+WHAT GOES IN EACH SECTION
+  <vc-helpers> sits in the package body's declarative part, before "begin"-less
+  bodies. Only complete declarations belong here: expression functions, ghost
+  functions, ordinary functions, each with a full profile and a terminating
+  semicolon. Never put the specified subprogram's body here.
+  <vc-code> is the complete body of the subprogram declared in <vc-spec>. Its
+  profile must repeat the declaration exactly, then "is", declarations, "begin",
+  statements, "end Name;".
+
+NEVER write pragma Assume, pragma Annotate (GNATprove, ...), SPARK_Mode => Off,
+pragma Suppress, pragma Warnings (Off), or Unchecked_Conversion. These are
+detected and rejected before the prover is consulted. pragma Assert and
+pragma Loop_Invariant are NOT bypasses and are wanted wherever they help.
+
+Do not alter the specification, the profile, or any Pre or Post aspect.
+
+--------------------------------------------------------------------------
+SPARK RULES THAT COST THIS SHOP REAL ITERATIONS. Each one below has failed a
+real run. They are properties of SPARK, not hints about this particular task.
+--------------------------------------------------------------------------
+
+1. AN "out" PARAMETER MUST BE INITIALISED ON EVERY PATH, AND FLOW ANALYSIS
+   WILL NOT TAKE A LOOP'S WORD FOR IT.
+   This is the single most expensive mistake on this lane. SPARK's flow
+   analysis is not the prover; it does not reason about ranges. A loop that
+   plainly writes every element of an "out" array still leaves flow analysis
+   saying the array "might not be initialized", because flow analysis does not
+   know the loop covers the whole range.
+   The fix is one statement, placed BEFORE the loop, that initialises the whole
+   object at once:
+        Result := (others => <some legal value of the element type>);
+   Write it even when the loop that follows overwrites every element. It costs
+   one line and it is the difference between a proof and a failure. The same
+   applies to an "out" scalar: assign it on every path, including paths you
+   believe unreachable.
+   Ada has no way to say "the loop covers it". Initialise the whole thing.
+
+2. A LOOP INVARIANT MUST BE INDUCTIVE, NOT MERELY TRUE.
+   The prover proves your invariant holds on entry to the first iteration, and
+   that IF it holds at the top of an iteration THEN it holds at the top of the
+   next. It then has the invariant, and the negated exit condition, and nothing
+   else, to prove your Post. So:
+     - The invariant must speak about EVERY index processed so far, not about
+       the current one and not about one or two remembered values. An invariant
+       of the shape "(for all J in <first> .. <current> => <the property>)" is
+       usually what is needed; an invariant naming only the latest element is
+       the classic failure and proves nothing on exit.
+     - On exit, the invariant plus "the loop ran to the end" must IMPLY the
+       whole Post. Read your Post, then ask whether your invariant delivers it
+       at the last index. If it does not, the invariant is too weak.
+     - Anything the loop leaves unchanged but the Post talks about must be
+       stated in the invariant too. The prover forgets everything not carried
+       by the invariant. Use X'Loop_Entry to refer to a value as it was before
+       the loop.
+   Placement: a pragma Loop_Invariant must sit among the statements of the loop
+   body, at the top level of that body — not nested inside an if, and not in a
+   declarative part. Immediately after the statements that establish it is the
+   usual place.
+
+3. WRITE ADA, NOT PSEUDO-ADA. These exact inventions have been emitted here:
+     - "implies" is NOT an Ada operator. Write (if X then Y).
+     - "Pre'Class" / "Post'Class" are only legal on a primitive of a tagged
+       type. On a plain subprogram write Pre and Post.
+     - Do not mix "and" with "and then", or "or" with "or else", in one
+       expression without parentheses: GNAT rejects it as mixed logical
+       operators. Parenthesise, or pick one form.
+     - Quantifiers are (for all J in Range => Expr) and (for some J in Range
+       => Expr). The arrow is required.
+     - 'Result is legal only inside a function's Post.
+     - Array attributes are A'First, A'Last, A'Range, A'Length. There is no
+       A'Size for the element count.
+
+4. EVERY RUN-TIME CHECK MUST BE PROVABLE, AND THE TYPES HERE ARE BOUNDED.
+   The subtypes in the preamble have real bounds, so overflow and range checks
+   are genuine obligations, not formalities. An intermediate value that leaves
+   its subtype's range is an unproved check even when the final answer would
+   have been in range.
+     - Before an arithmetic operation whose operands you cannot bound from the
+       declared subtypes alone, state the bound the prover needs — as a loop
+       invariant if it is carried across iterations, as a pragma Assert if it
+       is local.
+     - If the specification's Pre already bounds an input, you may rely on it;
+       if it does not, you must derive the bound from the subtype declarations
+       in the preamble and say so.
+     - Indexing: prove the index is in A'Range. Inside "for I in A'Range" this
+       is free for A, but NOT for a second array unless its bounds are tied to
+       A's by the Pre. Read the Pre and use what it gives you.
+     - Division and mod: the divisor must be provably non-zero.
+
+5. USE THE SPECIFICATION AS THE INSTRUCTION.
+   The Post is the whole of what you must achieve — no more and no less. Do not
+   implement a behaviour the Post does not ask for, and do not weaken what it
+   does ask for. Where the Post is a conjunction, satisfy every conjunct; an
+   invariant that establishes one conjunct and forgets another is the second
+   most common failure here.
+
+6. SIMPLEST BODY THAT DISCHARGES.
+   Prefer a single straightforward loop over a clever one. Prefer an expression
+   function helper over a procedure helper. Do not add annotations that carry
+   no proof obligation you need — they cost prover time and can confuse the
+   ranking. Do not declare variables you do not use.
+
+--------------------------------------------------------------------------
+Now write the two sections for the file below. Remember rule 1 before you
+write the loop, and rule 2 while you write it.
+--------------------------------------------------------------------------
+
+SPARK FILE WITH PLACEHOLDER SECTIONS:
+{{TASK_FILE}}
